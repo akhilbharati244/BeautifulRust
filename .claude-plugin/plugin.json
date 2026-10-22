@@ -1,0 +1,12 @@
+{
+  "name": "beautiful-rust",
+  "version": "1.0.0",
+  "description": "Teaches Claude to write idiomatic, robust Rust: ownership, API design, errors and panics, async, unsafe, crates, docs, and tests. Synthesized from the Google Rust Style Guide, the Rust API Guidelines, Effective Rust, Rust Design Patterns, and Microsoft's Pragmatic Rust Guidelines.",
+  "author": {
+    "name": "Morgan Linton",
+    "url": "https://github.com/morganlinton"
+  },
+  "homepage": "https://github.com/morganlinton/BeautifulRust",
+  "repository": "https://github.com/morganlinton/BeautifulRust",
+  "keywords": ["rust", "skill", "best-practices", "style-guide", "api-design"]
+}
