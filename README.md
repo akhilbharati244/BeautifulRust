@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="Pixel art: a painter in a beret stands at an easel, painting a portrait of a crab that is posing on a stool" width="840">
+</p>
+
 # Beautiful Rust
 
 A Claude Code plugin with one skill, `rust-best-practices`, that teaches Claude to write
