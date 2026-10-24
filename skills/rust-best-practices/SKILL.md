@@ -31,8 +31,6 @@ Where the sources disagree, this file says which to follow and why.
   follows the API-design rules below strictly. Application code should favor simplicity
   and directness: concrete types, `anyhow`-style errors, `Vec` return values, no
   speculative generality.
-- **Readability over writeability.** Code is read far more often than it is written.
-  Prefer the explicit, boring form over a clever one.
 - **Let the tools do the work.** rustfmt owns formatting, clippy owns idiom checks, the
   compiler owns memory safety. Spend your attention on design.
 
@@ -153,9 +151,13 @@ implements a cheap `Clone` by wrapping its state in `Arc<Inner>` internally.
   and derive or forward the traits you need (`derive_more` cuts the boilerplate). A
   newtype that encodes an invariant (`Month`) validates in a fallible constructor
   (`TryFrom`, `FromStr`, `try_new`) and never offers an infallible `From` from the raw type.
-- **Enums instead of booleans** when the meaning isn't obvious at the call site:
-  `Widget::new(Size::Small, Shape::Round)`, not `Widget::new(true, false)`. If you keep a
-  `bool` parameter, comment the argument at the call site.
+- **No `bool` parameters in public or shared signatures.** `report(true)` is unreadable at
+  the call site and cannot grow a third mode. Use a two-variant enum
+  (`Verbosity::Summary`, `Verbosity::Full`) or two methods (`report()`,
+  `report_verbose()`): `Widget::new(Size::Small, Shape::Round)`, not
+  `Widget::new(true, false)`. The only exception is a private helper whose call sites sit
+  a few lines away. When refactoring, an existing `bool` parameter is one of the smells to
+  remove, not a detail to preserve.
 - **Named fields over tuples**, except single-field newtypes and very local code.
 - **`Option` for absence, never sentinels** such as `-1` or `""`. **Data-carrying enums**
   instead of "field X is only meaningful when Y is set".
@@ -183,6 +185,11 @@ Overload operators only for their mathematical meaning.
 
 Don't put derivable trait bounds on struct definitions: `#[derive(Clone)] struct Good<T>`,
 not `struct Bad<T: Clone + Debug>`. Bounds belong on the `impl` blocks that need them.
+
+If you hand-write `Ord`, hand-write `PartialEq`, `PartialOrd`, and `Hash` to agree with it
+(compare the same fields, ignore the same fields). A derived `PartialEq` next to a custom
+`Ord` breaks the std contract and misbehaves in `BTreeMap` and `sort`/`dedup`. Say in the
+docs which fields equality ignores.
 
 ### Constructors, builders, defaults
 
@@ -251,6 +258,21 @@ not `struct Bad<T: Clone + Debug>`. Bounds belong on the `impl` blocks that need
 - Reach for a macro only when functions, generics, and traits cannot do the job. Prefer
   `macro_rules!` to proc macros, make macro input look like the output it generates, and
   never let a macro change a type's kind or a function's signature.
+
+### Refactoring someone else's code
+
+- Fix every smell the request is about, not just the cheap ones: clones that only
+  satisfy the borrow checker, `&String` / `&Vec<T>` parameters, `unwrap` on fallible
+  paths, `Rc<RefCell<_>>` in signatures, `get_` getters, `bool` parameters, `+` string
+  concatenation, `#![deny(warnings)]`, error types without `Error`, nondeterministic
+  `HashMap` iteration in output.
+- Keep public behavior identical unless changing it is the point: the same operations,
+  the same success and failure semantics, the same output bytes. Turning a panic into an
+  `Err` is the change callers want. Dropping an error variant, removing a derive, or
+  changing what a constructor takes is not; if a signature must change, show the before
+  and after in the change list and say why.
+- Preserve quirks you don't understand and flag them, rather than silently "fixing" them.
+- When the module has no tests, pin the current behavior with a few before you touch it.
 
 ## 5. Errors and panics
 
@@ -340,7 +362,7 @@ panic, `# Safety` for every `unsafe fn`.
 - **Magic numbers** become named `const`s with a doc comment saying where the value
   comes from and what changing it affects.
 - **Logging:** structured events through `tracing` or `log`, not `println!` / `dbg!`,
-  in anything but a CLI's stdout UI. Keep logging out of hot inner loops.
+  except for a CLI's own stdout output.
 
 ## 7. Concurrency and async
 
@@ -467,6 +489,8 @@ Before returning Rust code, confirm:
   `&String` or `&Vec<T>`.
 - Every public type derives `Debug` and the applicable common traits; error types
   implement `Error + Display + Send + Sync + 'static`.
+- No `bool` parameters in public signatures; no hand-written `Ord` without matching
+  `PartialEq` and `Hash`.
 - No `.clone()` whose only job is to satisfy the borrow checker.
 - No glob imports, no preludes, no glob re-exports, no leaked third-party types.
 - Every `unsafe` block has a `// SAFETY:` comment; every `unsafe fn` has `# Safety` docs.
@@ -478,22 +502,14 @@ Before returning Rust code, confirm:
 Read these when you need the reasoning behind a rule or a complete checklist for a task.
 Each is a condensed digest of one source.
 
-- `references/rust-api-guidelines.md`: designing a public API or crate. All 54 checklist
-  items (C-CASE, C-CONV, C-GETTER, C-COMMON-TRAITS, C-SEALED, ...) with conventions.
-- `references/effective-rust.md`: deciding between alternatives (generics vs `dyn`,
-  `Result` vs panic, iterators vs loops, borrow-checker tactics, dependencies, CI).
-- `references/rust-design-patterns.md`: idioms, patterns, and anti-patterns with code
-  (`mem::take`, builders, RAII guards, newtype, visitor, the clone and `Deref`
-  anti-patterns).
-- `references/microsoft-rust-guidelines.md`: error struct design, panic policy, unsafe
-  policy, async, workspace layout, performance, and writing code AI agents handle well.
-- `references/google-rust-style-guide.md`: formatting, imports, module layout, accessor
-  naming, and the application-vs-library distinction.
-
-Source URLs:
-
-- Google Rust Style Guide: https://google.github.io/styleguide/rustguide.html
-- Rust API Guidelines: https://rust-lang.github.io/api-guidelines/
-- Effective Rust (David Drysdale): https://www.lurklurk.org/effective-rust/
-- Rust Design Patterns: https://rust-unofficial.github.io/patterns/
-- Microsoft Pragmatic Rust Guidelines: https://microsoft.github.io/rust-guidelines/
+- `references/rust-api-guidelines.md` (https://rust-lang.github.io/api-guidelines/):
+  designing a public API or crate; all 54 checklist items with conventions.
+- `references/effective-rust.md` (https://www.lurklurk.org/effective-rust/): choosing
+  between alternatives: generics vs `dyn`, `Result` vs panic, iterators vs loops,
+  borrow-checker tactics, dependencies, CI.
+- `references/rust-design-patterns.md` (https://rust-unofficial.github.io/patterns/):
+  idioms, patterns, and anti-patterns with code.
+- `references/microsoft-rust-guidelines.md` (https://microsoft.github.io/rust-guidelines/):
+  error struct design, panic policy, unsafe policy, async, workspace layout, performance.
+- `references/google-rust-style-guide.md` (https://google.github.io/styleguide/rustguide.html):
+  formatting, imports, module layout, accessor naming, application vs library.
