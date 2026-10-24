@@ -497,6 +497,33 @@ def write_png(path, big):
     return fw, fh
 
 
+# --------------------------------------------------------------------------
+# icon: the crab alone, square, for the plugin listing
+# --------------------------------------------------------------------------
+def render_icon(path, size=128):
+    """Render a square icon by re-pointing the scene globals at a small canvas."""
+    global W, H, HORIZON, SUN, ROCKS
+    saved = (W, H, HORIZON, SUN, ROCKS)
+    W = H = size
+    HORIZON = int(size * 0.44)
+    SUN = (int(size * 0.77), int(size * 0.34))
+    ROCKS = [(size // 2, int(size * 1.17), int(size * 0.70), int(size * 0.46)),
+             (size // 2, int(size * 1.30), size, int(size * 0.40))]
+    try:
+        img = [[(0.0, 0.0, 0.0)] * W for _ in range(H)]
+        render_sky(img)
+        render_sea(img)
+        compute_ground()
+        render_foam(img)
+        render_rocks(img)
+        render_crab(img, size // 2, k=size / 96.0)
+        big = upscale(quantize(img))
+        return write_png(path, big)
+    finally:
+        W, H, HORIZON, SUN, ROCKS = saved
+        compute_ground()
+
+
 def main():
     img = [[(0.0, 0.0, 0.0)] * W for _ in range(H)]
     render_sky(img)
@@ -520,6 +547,9 @@ def main():
     out = Path(__file__).with_name("banner.png")
     fw, fh = write_png(out, big)
     print(f"wrote {out} ({fw}x{fh})")
+    icon = Path(__file__).resolve().parent.parent / ".claude-plugin" / "icon.png"
+    iw, ih = render_icon(icon)
+    print(f"wrote {icon} ({iw}x{ih})")
 
 
 if __name__ == "__main__":

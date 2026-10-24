@@ -114,6 +114,24 @@ Validate before pushing:
 claude plugin validate .
 ```
 
+## Sources and attribution
+
+The guidance in this skill is a synthesis. The five digests in
+`skills/rust-best-practices/references/` are paraphrased summaries written for this
+project; they restate each source's advice in condensed form and link back to the
+original. Read the originals for the full reasoning.
+
+| Source | Author | License |
+|---|---|---|
+| [Google Rust Style Guide](https://google.github.io/styleguide/rustguide.html) | Google | CC BY 3.0 |
+| [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/) | The Rust Project | MIT or Apache-2.0 |
+| [Effective Rust](https://www.lurklurk.org/effective-rust/) | David Drysdale, published by O'Reilly | CC BY-NC-ND 4.0 (online edition) |
+| [Rust Design Patterns](https://rust-unofficial.github.io/patterns/) | rust-unofficial contributors | MPL-2.0 |
+| [Pragmatic Rust Guidelines](https://microsoft.github.io/rust-guidelines/) | Microsoft | MIT |
+
+The skill text, the digests, the banner, and the generator script in this repository
+are MIT licensed (see [LICENSE](LICENSE)). The crab is a crab, not the Rust mascot.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
