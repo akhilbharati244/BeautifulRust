@@ -6,6 +6,24 @@ All notable changes to this project are listed here. Versions follow
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-25
+
+### Added
+
+- **`rust-port` skill.** Ports C, C++, Python, Go, JavaScript, or TypeScript to
+  idiomatic Rust with the same behavior. It ports the original tests first, maps each
+  language's habits to Rust (`NULL` and `None` to `Option`, error codes and exceptions to
+  error enums, flag ints and magic strings to typed values), keeps the port proportionate
+  instead of reimplementing the source language's runtime, and writes a `PORTING.md`
+  with API and test mappings and every deliberate difference.
+- Two eval cases for it: a C config parser and a Python task scheduler, each with its
+  original test suite. With the skill, the ports passed 22 of 22 checks; without it, 19
+  of 22. Both configurations ported correctly. The skill's ports were the ones that
+  stayed proportionate: the baseline Python port was 5.8 times the original's size and
+  reimplemented Python's string and integer parsing; the skill's was 3.1 times, with none.
+- `CONTRIBUTING.md` and issue templates for proposing a rule and reporting a review false
+  positive.
+
 ## [1.2.0] - 2026-10-25
 
 ### Added
@@ -60,7 +78,8 @@ First release.
 - Packaged as a Claude Code plugin that is its own marketplace.
 - MIT license, source attribution, and a plugin icon.
 
-[Unreleased]: https://github.com/morganlinton/BeautifulRust/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/morganlinton/BeautifulRust/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/morganlinton/BeautifulRust/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/morganlinton/BeautifulRust/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/morganlinton/BeautifulRust/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/morganlinton/BeautifulRust/releases/tag/v1.0.0

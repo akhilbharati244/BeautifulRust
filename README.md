@@ -4,13 +4,15 @@
 
 # Beautiful Rust
 
-Two standard [Agent Skills](https://agentskills.io) and a lints config that teach coding
-agents to write, review, and enforce idiomatic Rust:
+Three standard [Agent Skills](https://agentskills.io) and a lints config that teach coding
+agents to write, review, port, and enforce idiomatic Rust:
 
 - **`rust-best-practices`** loads whenever an agent writes or changes Rust, and steers it
   toward idiomatic, robust, maintainable code.
 - **`rust-review`** reviews existing Rust code, a file, a crate, or a diff, and writes a
   prioritized report where every finding cites the rule it breaks and shows the fix.
+- **`rust-port`** ports C, C++, Python, Go, or JavaScript to idiomatic Rust with the same
+  behavior, porting the original tests first so you can prove the two match.
 - **`lints/`** is a drop-in clippy configuration that enforces the machine-checkable rules
   in CI.
 
@@ -96,9 +98,9 @@ passed 29 of 30 checks against 24 of 30 without it. See [Testing the skills](#te
 
 ## Install
 
-Each skill is a folder under `skills/`: `rust-best-practices/` and `rust-review/`. Every
-option below puts those folders where your agent looks for skills. Install both; the review
-skill reads the best-practices references when it needs a rule's full reasoning.
+Each skill is a folder under `skills/`: `rust-best-practices/`, `rust-review/`, and
+`rust-port/`. Every option below puts those folders where your agent looks for skills.
+Install all three; the review and port skills lean on the best-practices skill for style.
 
 ### Any agent, one command
 
@@ -127,9 +129,9 @@ Inside a session, the same thing is:
 /plugin install beautiful-rust@beautiful-rust
 ```
 
-This installs both skills. They appear as `/beautiful-rust:rust-best-practices` and
-`/beautiful-rust:rust-review`, though you rarely need to call them, since they trigger on
-their own. To try it for one session without installing, clone the repo
+This installs all three skills. They appear as `/beautiful-rust:rust-best-practices`,
+`/beautiful-rust:rust-review`, and `/beautiful-rust:rust-port`, though you rarely need to
+call them, since they trigger on their own. To try it for one session without installing, clone the repo
 and run `claude --plugin-dir ./BeautifulRust`.
 
 ### GitHub Copilot
@@ -139,6 +141,7 @@ With GitHub CLI 2.90 or later:
 ```bash
 gh skill install morganlinton/BeautifulRust rust-best-practices
 gh skill install morganlinton/BeautifulRust rust-review
+gh skill install morganlinton/BeautifulRust rust-port
 ```
 
 This installs into the current project by default. Add `--scope user` to install for your
@@ -149,17 +152,18 @@ user, or `--agent <name>` to install for a different agent.
 ```bash
 gemini skills install https://github.com/morganlinton/BeautifulRust --path skills/rust-best-practices
 gemini skills install https://github.com/morganlinton/BeautifulRust --path skills/rust-review
+gemini skills install https://github.com/morganlinton/BeautifulRust --path skills/rust-port
 ```
 
 ### OpenAI Codex, Cursor, or anything else: copy the folder
 
-Clone the repo and copy both skill folders into your agent's skills directory.
+Clone the repo and copy the three skill folders into your agent's skills directory.
 Most agents now read the shared `.agents/skills/` location:
 
 ```bash
 git clone https://github.com/morganlinton/BeautifulRust
 mkdir -p ~/.agents/skills
-cp -R BeautifulRust/skills/rust-best-practices BeautifulRust/skills/rust-review ~/.agents/skills/
+cp -R BeautifulRust/skills/rust-* ~/.agents/skills/
 ```
 
 | Agent | User directory | Project directory |
@@ -181,6 +185,7 @@ claude.ai takes one zip per skill, with the skill folder as the zip root:
 cd skills
 zip -r ../rust-best-practices.zip rust-best-practices -x '*.DS_Store' -x '*/evals/*'
 zip -r ../rust-review.zip rust-review -x '*.DS_Store' -x '*/evals/*'
+zip -r ../rust-port.zip rust-port -x '*.DS_Store' -x '*/evals/*'
 ```
 
 Upload each under **Customize > Skills**. Code execution must be enabled first.
@@ -197,6 +202,18 @@ report ends with what the code already does well.
 
 [`examples/review-inventory.md`](examples/review-inventory.md) is a real review the skill
 produced for the deliberately messy module in the eval cases.
+
+## Porting code to Rust
+
+Ask your agent to port a module, for example "port parser.c to Rust" or "rewrite this
+Python service in Rust". The `rust-port` skill reads the original and its tests, ports the
+tests first, designs a Rust API instead of transliterating the original, and verifies with
+`cargo test` and `clippy`. It maps each language's habits to their Rust equivalents:
+`NULL` and `None` to `Option`, error codes and exceptions to an error enum, out-parameters
+to return values, flag ints and magic strings to typed enums and options, and dict
+insertion order to an ordered collection instead of a `HashMap` that would silently
+reorder output. Each port comes with a `PORTING.md` that maps the old API and tests to the
+new ones and lists every deliberate difference.
 
 ## Enforcing the rules with clippy
 
@@ -246,15 +263,19 @@ BeautifulRust/
 │   │   ├── SKILL.md
 │   │   ├── references/        one digest per source
 │   │   └── evals/
-│   └── rust-review/           review skill
+│   ├── rust-review/           review skill
+│   │   ├── SKILL.md
+│   │   └── evals/
+│   └── rust-port/             porting skill
 │       ├── SKILL.md
-│       └── evals/
+│       └── evals/             a C module and a Python module to port
 ├── lints/
 │   ├── lints.toml             [lints] block for Cargo.toml
 │   └── clippy.toml            clippy thresholds
 ├── examples/
 │   └── review-inventory.md    a real review report
 ├── CHANGELOG.md
+├── CONTRIBUTING.md
 └── README.md
 ```
 
@@ -270,12 +291,14 @@ directory:
 claude plugin eval . --allow-tools Write,Edit,Bash --scaffold
 ```
 
-`skills/rust-review/evals/` holds a review case for the same messy module. Run it the same
-way from that skill's directory.
+`skills/rust-review/evals/` holds a review case for the same messy module, and
+`skills/rust-port/evals/` holds a C module and a Python module to port, each with its
+original test suite. Run them the same way from each skill's directory.
 
 These are real model runs and are billed. In the last comparison the writing skill passed 29 of
 30 assertions against 24 of 30 without it, at roughly a third more tokens per task. The
-review skill passed 11 of 12 against 7 of 12.
+review skill passed 11 of 12 against 7 of 12, and the porting skill 22 of 22 against
+19 of 22.
 
 ## Updating
 
@@ -294,6 +317,12 @@ Validate before pushing:
 ```bash
 claude plugin validate .
 ```
+
+## Contributing
+
+Issues and pull requests are welcome. Every rule needs a published source; see
+[CONTRIBUTING.md](CONTRIBUTING.md) for how to propose a rule, report a review false
+positive, or add an eval case.
 
 ## Sources and attribution
 
