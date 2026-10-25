@@ -4,11 +4,19 @@
 
 # Beautiful Rust
 
-A standard [Agent Skill](https://agentskills.io), `rust-best-practices`, that teaches
-coding agents to write idiomatic, robust, maintainable Rust. It works with Claude Code,
-OpenAI Codex, GitHub Copilot, Cursor, Gemini CLI, and any other agent that reads the Agent
-Skills format. Once installed, it loads whenever a task involves Rust, cargo, crates, the
-borrow checker, clippy, or `.rs` files.
+Two standard [Agent Skills](https://agentskills.io) and a lints config that teach coding
+agents to write, review, and enforce idiomatic Rust:
+
+- **`rust-best-practices`** loads whenever an agent writes or changes Rust, and steers it
+  toward idiomatic, robust, maintainable code.
+- **`rust-review`** reviews existing Rust code, a file, a crate, or a diff, and writes a
+  prioritized report where every finding cites the rule it breaks and shows the fix.
+- **`lints/`** is a drop-in clippy configuration that enforces the machine-checkable rules
+  in CI.
+
+They work with Claude Code, OpenAI Codex, GitHub Copilot, Cursor, Gemini CLI, and any other
+agent that reads the Agent Skills format. Every code example in the skills compiles on
+stable Rust, and every lint in the config was checked against current clippy.
 
 The guidance is distilled from five sources, with a condensed digest of each bundled in
 the skill so the agent can consult the original reasoning when it needs to:
@@ -84,12 +92,13 @@ impl Version {
 ```
 
 Across three test tasks (a library, a CLI, and refactoring a messy module), the skill
-passed 29 of 30 checks against 24 of 30 without it. See [Testing the skill](#testing-the-skill).
+passed 29 of 30 checks against 24 of 30 without it. See [Testing the skills](#testing-the-skills).
 
 ## Install
 
-The skill is the folder `skills/rust-best-practices/`. Every option below puts that folder
-where your agent looks for skills.
+Each skill is a folder under `skills/`: `rust-best-practices/` and `rust-review/`. Every
+option below puts those folders where your agent looks for skills. Install both; the review
+skill reads the best-practices references when it needs a rule's full reasoning.
 
 ### Any agent, one command
 
@@ -118,8 +127,9 @@ Inside a session, the same thing is:
 /plugin install beautiful-rust@beautiful-rust
 ```
 
-The skill then appears as `/beautiful-rust:rust-best-practices`. You rarely need to call it,
-since it triggers on its own. To try it for one session without installing, clone the repo
+This installs both skills. They appear as `/beautiful-rust:rust-best-practices` and
+`/beautiful-rust:rust-review`, though you rarely need to call them, since they trigger on
+their own. To try it for one session without installing, clone the repo
 and run `claude --plugin-dir ./BeautifulRust`.
 
 ### GitHub Copilot
@@ -128,6 +138,7 @@ With GitHub CLI 2.90 or later:
 
 ```bash
 gh skill install morganlinton/BeautifulRust rust-best-practices
+gh skill install morganlinton/BeautifulRust rust-review
 ```
 
 This installs into the current project by default. Add `--scope user` to install for your
@@ -137,17 +148,18 @@ user, or `--agent <name>` to install for a different agent.
 
 ```bash
 gemini skills install https://github.com/morganlinton/BeautifulRust --path skills/rust-best-practices
+gemini skills install https://github.com/morganlinton/BeautifulRust --path skills/rust-review
 ```
 
 ### OpenAI Codex, Cursor, or anything else: copy the folder
 
-Clone the repo and copy `skills/rust-best-practices/` into your agent's skills directory.
+Clone the repo and copy both skill folders into your agent's skills directory.
 Most agents now read the shared `.agents/skills/` location:
 
 ```bash
 git clone https://github.com/morganlinton/BeautifulRust
 mkdir -p ~/.agents/skills
-cp -R BeautifulRust/skills/rust-best-practices ~/.agents/skills/
+cp -R BeautifulRust/skills/rust-best-practices BeautifulRust/skills/rust-review ~/.agents/skills/
 ```
 
 | Agent | User directory | Project directory |
@@ -163,15 +175,45 @@ Restart the agent if the skill doesn't show up right away.
 
 ### claude.ai
 
-claude.ai takes a zip of the skill folder, with the folder as the zip root:
+claude.ai takes one zip per skill, with the skill folder as the zip root:
 
 ```bash
-cd skills && zip -r ../rust-best-practices.zip rust-best-practices -x '*.DS_Store' -x 'rust-best-practices/evals/*'
+cd skills
+zip -r ../rust-best-practices.zip rust-best-practices -x '*.DS_Store' -x '*/evals/*'
+zip -r ../rust-review.zip rust-review -x '*.DS_Store' -x '*/evals/*'
 ```
 
-Upload it under **Customize > Skills**. Code execution must be enabled first.
+Upload each under **Customize > Skills**. Code execution must be enabled first.
 
-## What the skill covers
+## Reviewing existing code
+
+Ask your agent to review a file, crate, or diff, for example "review src/parser.rs" or
+"what would you change in this PR". The `rust-review` skill runs `cargo fmt`, `clippy`, and
+the tests when a toolchain is available, then writes a report with three tiers: must fix,
+should fix, and consider. Every finding gives a `file:line` location, the rule it breaks
+with its source (an API Guidelines code such as `C-GETTER`, an Effective Rust item, a
+Microsoft guideline, or a clippy lint), and the smallest code change that fixes it. Each
+report ends with what the code already does well.
+
+[`examples/review-inventory.md`](examples/review-inventory.md) is a real review the skill
+produced for the deliberately messy module in the eval cases.
+
+## Enforcing the rules with clippy
+
+The skills teach the rules; the lints keep them from slipping back in. Copy
+[`lints/clippy.toml`](lints/clippy.toml) next to your `Cargo.toml` and paste the `[lints]`
+block from [`lints/lints.toml`](lints/lints.toml) into it, then run:
+
+```bash
+cargo clippy --all-targets --all-features -- -D warnings
+```
+
+It flags `unwrap()` outside tests, `unsafe` blocks without a `// SAFETY:` comment, `#[allow]`
+without a reason, any `bool` function parameter, silent lossy `as` casts, missing `# Errors`
+and `# Panics` docs, and leftover `dbg!` and `todo!`. Lints marked `[lib]` in the file are
+for libraries, and applications can drop them.
+
+## What the writing skill covers
 
 `skills/rust-best-practices/SKILL.md` is about 500 lines, organized so an agent can scan
 it while coding:
@@ -200,18 +242,23 @@ BeautifulRust/
 │   ├── plugin.json         plugin manifest
 │   └── marketplace.json    lets this repo act as its own marketplace
 ├── skills/
-│   └── rust-best-practices/
+│   ├── rust-best-practices/   writing skill
+│   │   ├── SKILL.md
+│   │   ├── references/        one digest per source
+│   │   └── evals/
+│   └── rust-review/           review skill
 │       ├── SKILL.md
-│       └── references/
-│           ├── google-rust-style-guide.md
-│           ├── rust-api-guidelines.md
-│           ├── effective-rust.md
-│           ├── rust-design-patterns.md
-│           └── microsoft-rust-guidelines.md
+│       └── evals/
+├── lints/
+│   ├── lints.toml             [lints] block for Cargo.toml
+│   └── clippy.toml            clippy thresholds
+├── examples/
+│   └── review-inventory.md    a real review report
+├── CHANGELOG.md
 └── README.md
 ```
 
-## Testing the skill
+## Testing the skills
 
 `skills/rust-best-practices/evals/` holds three test cases in the layout `claude plugin eval`
 reads: a library API design task, an application CLI task, and a refactor-this-module task
@@ -223,8 +270,12 @@ directory:
 claude plugin eval . --allow-tools Write,Edit,Bash --scaffold
 ```
 
-These are real model runs and are billed. In the last comparison the skill passed 29 of
-30 assertions against 24 of 30 without it, at roughly a third more tokens per task.
+`skills/rust-review/evals/` holds a review case for the same messy module. Run it the same
+way from that skill's directory.
+
+These are real model runs and are billed. In the last comparison the writing skill passed 29 of
+30 assertions against 24 of 30 without it, at roughly a third more tokens per task. The
+review skill passed 11 of 12 against 7 of 12.
 
 ## Updating
 
