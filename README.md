@@ -4,12 +4,14 @@
 
 # Beautiful Rust
 
-A Claude Code plugin with one skill, `rust-best-practices`, that teaches Claude to write
-idiomatic, robust, maintainable Rust. Once installed, it loads automatically whenever a
-task involves Rust, cargo, crates, the borrow checker, clippy, or `.rs` files.
+A standard [Agent Skill](https://agentskills.io), `rust-best-practices`, that teaches
+coding agents to write idiomatic, robust, maintainable Rust. It works with Claude Code,
+OpenAI Codex, GitHub Copilot, Cursor, Gemini CLI, and any other agent that reads the Agent
+Skills format. Once installed, it loads whenever a task involves Rust, cargo, crates, the
+borrow checker, clippy, or `.rs` files.
 
 The guidance is distilled from five sources, with a condensed digest of each bundled in
-the skill so Claude can consult the original reasoning when it needs to:
+the skill so the agent can consult the original reasoning when it needs to:
 
 - [Google Rust Style Guide](https://google.github.io/styleguide/rustguide.html)
 - [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/) (official rust-lang checklist)
@@ -19,49 +21,159 @@ the skill so Claude can consult the original reasoning when it needs to:
 
 Where the sources disagree, the skill picks a side and says why.
 
-## Install in Claude Code
+## What it changes
 
-One step, from a terminal:
+Asked for a small semver-parsing library, an agent without the skill produced working
+code with public fields, no `# Errors` docs, and `unwrap()` in its doc examples. With the
+skill, the same agent kept the fields private, documented failure modes, and wrote doc
+examples users can copy safely. Condensed from those two runs:
+
+```rust
+// Without the skill
+/// A semantic version. The fields are public for convenience.
+pub struct Version {
+    pub major: u64,
+    pub minor: u64,
+    pub patch: u64,
+    pub pre: Vec<Identifier>,
+    pub build: Vec<String>,
+}
+
+impl Version {
+    /// Parses a version string.
+    ///
+    /// ```
+    /// let v = Version::parse("1.2.3").unwrap();
+    /// ```
+    pub fn parse(s: &str) -> Result<Version, ParseError> { /* ... */ }
+}
+```
+
+```rust
+// With the skill
+/// A semantic version. Equality, hashing, and ordering ignore build metadata.
+pub struct Version {
+    major: u64,
+    minor: u64,
+    patch: u64,
+    pre: Vec<Identifier>,
+    build: Vec<String>,
+}
+
+impl Version {
+    /// Parses a version string according to SemVer 2.0.0.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ParseVersionError`] if the string is empty, a numeric part has a
+    /// leading zero or overflows `u64`, or an identifier contains invalid characters.
+    ///
+    /// ```
+    /// # use semver_lite::Version;
+    /// # fn main() -> Result<(), semver_lite::ParseVersionError> {
+    /// let v = Version::parse("1.2.3-beta.1")?;
+    /// assert_eq!(v.major(), 1);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn parse(s: &str) -> Result<Self, ParseVersionError> { /* ... */ }
+
+    /// Returns the major version number.
+    pub fn major(&self) -> u64 { self.major }
+}
+```
+
+Across three test tasks (a library, a CLI, and refactoring a messy module), the skill
+passed 29 of 30 checks against 24 of 30 without it. See [Testing the skill](#testing-the-skill).
+
+## Install
+
+The skill is the folder `skills/rust-best-practices/`. Every option below puts that folder
+where your agent looks for skills.
+
+### Any agent, one command
+
+The [`skills`](https://github.com/vercel-labs/skills) installer supports most agents
+(Node 22.20 or later):
+
+```bash
+npx skills add morganlinton/BeautifulRust
+```
+
+Add `-g` to install for your user instead of the current project, or `-a <agent>` to pick
+an agent, such as `-a codex` or `-a cursor`.
+
+### Claude Code
+
+Install it as a plugin so updates arrive with one command:
 
 ```bash
 claude plugin install beautiful-rust --marketplace morganlinton/BeautifulRust
 ```
 
-Or inside a Claude Code session:
+Inside a session, the same thing is:
 
 ```
 /plugin marketplace add morganlinton/BeautifulRust
 /plugin install beautiful-rust@beautiful-rust
 ```
 
-Add `--scope project` to the terminal command to enable it for everyone working in the
-current repository (each collaborator still runs the install once).
+The skill then appears as `/beautiful-rust:rust-best-practices`. You rarely need to call it,
+since it triggers on its own. To try it for one session without installing, clone the repo
+and run `claude --plugin-dir ./BeautifulRust`.
 
-To try it for a single session without installing:
+### GitHub Copilot
+
+With GitHub CLI 2.90 or later:
+
+```bash
+gh skill install morganlinton/BeautifulRust rust-best-practices
+```
+
+This installs into the current project by default. Add `--scope user` to install for your
+user, or `--agent <name>` to install for a different agent.
+
+### Gemini CLI
+
+```bash
+gemini skills install https://github.com/morganlinton/BeautifulRust --path skills/rust-best-practices
+```
+
+### OpenAI Codex, Cursor, or anything else: copy the folder
+
+Clone the repo and copy `skills/rust-best-practices/` into your agent's skills directory.
+Most agents now read the shared `.agents/skills/` location:
 
 ```bash
 git clone https://github.com/morganlinton/BeautifulRust
-claude --plugin-dir ./BeautifulRust
+mkdir -p ~/.agents/skills
+cp -R BeautifulRust/skills/rust-best-practices ~/.agents/skills/
 ```
 
-The skill is namespaced under the plugin, so you can invoke it explicitly with
-`/beautiful-rust:rust-best-practices`. You rarely need to: it triggers on its own.
+| Agent | User directory | Project directory |
+|---|---|---|
+| Claude Code | `~/.claude/skills/` | `.claude/skills/` |
+| OpenAI Codex | `~/.agents/skills/` | `.agents/skills/` |
+| GitHub Copilot | `~/.copilot/skills/` or `~/.agents/skills/` | `.github/skills/` or `.agents/skills/` |
+| Cursor | `~/.cursor/skills/` or `~/.agents/skills/` | `.cursor/skills/` or `.agents/skills/` |
+| Gemini CLI | `~/.gemini/skills/` or `~/.agents/skills/` | `.gemini/skills/` or `.agents/skills/` |
 
-## Install in claude.ai
+Claude Code does not read `.agents/skills/`, so use its own directory or the plugin.
+Restart the agent if the skill doesn't show up right away.
+
+### claude.ai
 
 claude.ai takes a zip of the skill folder, with the folder as the zip root:
 
 ```bash
-cd skills && zip -r ../rust-best-practices.zip rust-best-practices -x '*.DS_Store'
+cd skills && zip -r ../rust-best-practices.zip rust-best-practices -x '*.DS_Store' -x 'rust-best-practices/evals/*'
 ```
 
-Upload it under **Customize > Skills** (on some plans this lives under Settings).
-Code execution must be enabled first. Skills uploaded to claude.ai also sync down into
-Claude Code sessions signed in with the same account.
+Upload it under **Customize > Skills**. Code execution must be enabled first.
 
 ## What the skill covers
 
-`skills/rust-best-practices/SKILL.md` is about 500 lines, organized so Claude can scan
+`skills/rust-best-practices/SKILL.md` is about 500 lines, organized so an agent can scan
 it while coding:
 
 1. Mindset: Rust-shaped code, invalid states unrepresentable, application vs library
@@ -117,11 +229,14 @@ These are real model runs and are billed. In the last comparison the skill passe
 ## Updating
 
 Edit the skill, bump `version` in `.claude-plugin/plugin.json`, commit, and push.
-Installed users pick up the new version with:
+Claude Code plugin users pick up the new version with:
 
 ```bash
 claude plugin update beautiful-rust
 ```
+
+Anyone who copied the folder or used an installer re-runs the install command. Record
+each release in [CHANGELOG.md](CHANGELOG.md).
 
 Validate before pushing:
 
