@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="Pixel art banner: a crab on a rocky shore at sunset, under the title Beautiful Rust and the subtitle Idiomatic Rust, distilled">
+  <img src="assets/banner.png" alt="Pixel art banner: a crab on rocky tide pools at sunset, with waves, sea stacks, and a forested headland, under the title Beautiful Rust and the subtitle Idiomatic Rust, distilled">
 </p>
 
 # Beautiful Rust

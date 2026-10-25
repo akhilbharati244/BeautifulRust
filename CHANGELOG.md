@@ -21,6 +21,7 @@ All notable changes to this project are listed here. Versions follow
   tests, `// SAFETY:` on every unsafe block, reasons on every suppression, and no `bool`
   parameters. Every lint name was verified against clippy 0.1.99.
 - An example review report in `examples/review-inventory.md`.
+- A new painted README banner.
 - An eval case for the review skill under `skills/rust-review/evals/`.
 - README install instructions for agents other than Claude Code, since both skills are
   standard Agent Skills, and a before/after example of what the writing skill changes.
