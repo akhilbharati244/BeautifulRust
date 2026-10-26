@@ -6,6 +6,12 @@ All notable changes to this project are listed here. Versions follow
 
 ## [Unreleased]
 
+- `lints/check/` and `scripts/check-lints.sh` prove every lint in `lints/lints.toml`
+  fires, and fail if a lint goes quiet or the table drifts. Contributed by
+  @mvanhorn.
+- `lints/lints.toml` adds `redundant_clone`, `rc_buffer`, `string_add`, and
+  `wildcard_imports`, and allows `module_inception` and `enum_glob_use`, from the same
+  contribution. It now notes that the two suppression lints need Rust 1.81 or later.
 - `scripts/check-skill.py` checks skill frontmatter, links, eval cases, and
   plugin manifests. CI runs it on push and pull request.
 

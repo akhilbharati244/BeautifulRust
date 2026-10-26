@@ -230,6 +230,19 @@ without a reason, any `bool` function parameter, silent lossy `as` casts, missin
 and `# Panics` docs, and leftover `dbg!` and `todo!`. Lints marked `[lib]` in the file are
 for libraries, and applications can drop them.
 
+Every lint in the table is proven to fire. [`lints/check/`](lints/check/src/lib.rs) is a small crate
+with one deliberate violation per lint, and this script runs clippy on it from the repo
+root:
+
+```bash
+bash scripts/check-lints.sh
+```
+
+It fails if a lint stops firing, if something unexpected fires, or if the check crate's
+copy of the table drifts from `lints/lints.toml`. `allow_attributes` and
+`allow_attributes_without_reason` need `rust-version = "1.81"` or later, because clippy
+switches them off for crates that can't use `#[expect]`.
+
 ## What the writing skill covers
 
 `skills/rust-best-practices/SKILL.md` is about 500 lines, organized so an agent can scan
@@ -271,7 +284,11 @@ BeautifulRust/
 │       └── evals/             a C module and a Python module to port
 ├── lints/
 │   ├── lints.toml             [lints] block for Cargo.toml
-│   └── clippy.toml            clippy thresholds
+│   ├── clippy.toml            clippy thresholds
+│   └── check/                 one deliberate violation per lint
+├── scripts/
+│   ├── check-skill.py         validates skills, evals, and manifests
+│   └── check-lints.sh         proves every lint in the table fires
 ├── examples/
 │   └── review-inventory.md    a real review report
 ├── CHANGELOG.md
