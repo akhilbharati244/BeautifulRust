@@ -12,10 +12,8 @@ description: >-
 
 # Rust best practices
 
-Distilled from five sources, with full per-source digests in `references/`: the Google
-Rust Style Guide, the official Rust API Guidelines, *Effective Rust* (David Drysdale),
-*Rust Design Patterns* (rust-unofficial), and Microsoft's Pragmatic Rust Guidelines.
-Where the sources disagree, this file says which to follow and why.
+Distilled from five Rust style and design guides, with a digest of each in `references/`.
+Where they disagree, this file says which to follow and why.
 
 ## 1. Mindset
 
@@ -49,16 +47,12 @@ cargo doc --no-deps   # libraries: catches broken doc links and missing docs
   `#[expect(clippy::name, reason = "...")]` on the narrowest item. `expect` warns when
   the lint stops firing, so stale suppressions get cleaned up. Use `#[allow]` only in
   generated code or macro output.
-- Never put `#![deny(warnings)]` in source. New toolchains add new warnings and will
-  break the build. Enforce warnings-as-errors in CI instead (`cargo clippy -- -D warnings`
-  or `RUSTFLAGS="-D warnings"`).
-- Configure lints once in `Cargo.toml` (`[lints.rust]`, `[lints.clippy]`, or
-  `[workspace.lints]`), not with scattered crate attributes. The BeautifulRust repo ships a
-  ready-made set in `lints/lints.toml` and `lints/clippy.toml`
-  (https://github.com/morganlinton/BeautifulRust); suggest it when a project has none. A good baseline:
-  `unsafe_op_in_unsafe_fn`, `missing_debug_implementations`, `clippy::all`, and where
-  the project tolerates them `clippy::undocumented_unsafe_blocks` and
-  `clippy::allow_attributes_without_reason`.
+- Never put `#![deny(warnings)]` in source: new toolchains add warnings and break the
+  build. Enforce warnings-as-errors in CI instead, with `cargo clippy -- -D warnings`.
+- Configure lints once in `Cargo.toml` (`[lints]` or `[workspace.lints]`), not with
+  scattered crate attributes. If a project has none, suggest `lints/lints.toml` and
+  `lints/clippy.toml` from https://github.com/morganlinton/BeautifulRust; the suppression
+  lints in it need `rust-version` 1.81 or later.
 
 ## 3. Ownership and borrowing
 

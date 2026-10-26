@@ -6,14 +6,34 @@ All notable changes to this project are listed here. Versions follow
 
 ## [Unreleased]
 
-- `lints/check/` and `scripts/check-lints.sh` prove every lint in `lints/lints.toml`
-  fires, and fail if a lint goes quiet or the table drifts. Contributed by
-  @mvanhorn.
-- `lints/lints.toml` adds `redundant_clone`, `rc_buffer`, `string_add`, and
-  `wildcard_imports`, and allows `module_inception` and `enum_glob_use`, from the same
-  contribution. It now notes that the two suppression lints need Rust 1.81 or later.
-- `scripts/check-skill.py` checks skill frontmatter, links, eval cases, and
-  plugin manifests. CI runs it on push and pull request.
+## [1.4.0] - 2026-10-26
+
+The first release with outside contributions. Thanks to @mvanhorn for both.
+
+### Added
+
+- **A skill checker in CI.** `scripts/check-skill.py` validates every skill's
+  frontmatter, links, eval cases, and the plugin manifests, using only Python's
+  standard library. It runs on every push and pull request. Contributed by @mvanhorn.
+- **Proof that every lint fires.** `lints/check/` is a crate with one deliberate
+  violation for each of the 28 lints set to warn, and `scripts/check-lints.sh` runs clippy
+  on it. It fails if a lint goes quiet, if something unexpected fires, or if the check
+  crate's copy of the table drifts from `lints/lints.toml`. CI now runs it too.
+  Contributed by @mvanhorn.
+- **Four more lints** in `lints/lints.toml`: `redundant_clone`, `rc_buffer`,
+  `string_add`, and `wildcard_imports`. `module_inception` and `enum_glob_use` are now
+  allowed, matching rules the skill already states.
+
+### Fixed
+
+- `allow_attributes` and `allow_attributes_without_reason` are silently disabled by
+  clippy for crates whose `rust-version` is below 1.81. The lints config and README now
+  say so.
+
+### Changed
+
+- `rust-best-practices` is back under the 500-line guidance, with no rules removed.
+- CI uses `actions/checkout@v7` and runs with read-only permissions.
 
 ## [1.3.0] - 2026-10-25
 
@@ -87,7 +107,8 @@ First release.
 - Packaged as a Claude Code plugin that is its own marketplace.
 - MIT license, source attribution, and a plugin icon.
 
-[Unreleased]: https://github.com/morganlinton/BeautifulRust/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/morganlinton/BeautifulRust/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/morganlinton/BeautifulRust/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/morganlinton/BeautifulRust/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/morganlinton/BeautifulRust/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/morganlinton/BeautifulRust/compare/v1.0.0...v1.1.0
