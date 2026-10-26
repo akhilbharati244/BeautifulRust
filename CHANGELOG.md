@@ -6,6 +6,11 @@ All notable changes to this project are listed here. Versions follow
 
 ## [Unreleased]
 
+### Changed
+
+- CI now runs the unit tests in `tests/` on every push and pull request, so a change
+  that breaks `scripts/check-skill.py` fails CI. `.gitignore` now ignores `__pycache__/`.
+
 ## [1.4.0] - 2026-10-26
 
 The first release with outside contributions. Thanks to @mvanhorn for both.
