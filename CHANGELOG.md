@@ -6,6 +6,9 @@ All notable changes to this project are listed here. Versions follow
 
 ## [Unreleased]
 
+- `scripts/check-skill.py` checks skill frontmatter, links, eval cases, and
+  plugin manifests. CI runs it on push and pull request.
+
 ## [1.3.0] - 2026-10-25
 
 ### Added
